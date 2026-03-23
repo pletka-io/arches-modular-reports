@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import arches from "arches";
 
-import { computed, watchEffect, provide, ref } from "vue";
+import { computed, watch, watchEffect, provide, ref } from "vue";
 import { useGettext } from "vue3-gettext";
 
 import Panel from "primevue/panel";
@@ -137,6 +137,28 @@ provide("softDeleteTile", {
     softDeleteRequestedTileId,
     requestSoftDeleteTile,
 });
+
+const LOCALSTORAGE_KEY_PREFIX = "arches_modular_reports_hide_empty_";
+
+function getStorageKey(slug: string): string {
+    return `${LOCALSTORAGE_KEY_PREFIX}${slug}`;
+}
+
+function loadHideEmptyFromStorage(): boolean {
+    const stored = localStorage.getItem(getStorageKey(graphSlug));
+    if (stored !== null) {
+        return stored === "true";
+    }
+    return false;
+}
+
+const hideEmptyFields = ref(loadHideEmptyFromStorage());
+
+watch(hideEmptyFields, (newValue) => {
+    localStorage.setItem(getStorageKey(graphSlug), String(newValue));
+});
+
+provide("hideEmptyFields", { hideEmptyFields });
 
 const reportKey = ref(0);
 
