@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, inject, onMounted, ref, watch } from "vue";
 import { useGettext } from "vue3-gettext";
 
 import Button from "primevue/button";
@@ -20,6 +20,8 @@ import FileListViewer from "@/arches_modular_reports/ModularReport/components/Fi
 
 import type { DataTablePageEvent } from "primevue/datatable";
 
+import type { Ref } from "vue";
+
 const props = defineProps<{
     component: {
         config: {
@@ -30,6 +32,10 @@ const props = defineProps<{
     };
     resourceInstanceId: string;
 }>();
+
+const hideEmptyFields = inject("hideEmptyFields") as {
+    hideEmptyFields: Ref<boolean>;
+};
 
 const { $gettext } = useGettext();
 
@@ -65,6 +71,13 @@ const isEmpty = computed(
         !searchResultsTotalCount.value &&
         !timeout,
 );
+
+const shouldShowEmptyState = computed(() => {
+    if (hideEmptyFields?.hideEmptyFields.value && isEmpty.value) {
+        return false;
+    }
+    return true;
+});
 
 function onPageTurn(event: DataTablePageEvent) {
     currentPage.value = resettingToFirstPage.value ? 1 : event.page + 1;
@@ -185,7 +198,7 @@ onMounted(fetchData);
         {{ $gettext("An error occurred while fetching data.") }}
     </Message>
     <div
-        v-else-if="isEmpty"
+        v-else-if="isEmpty && shouldShowEmptyState"
         class="section-table"
     >
         <div class="p-datatable-header section-table-header">
@@ -197,7 +210,7 @@ onMounted(fetchData);
     </div>
 
     <DataTable
-        v-else
+        v-else-if="!isEmpty || shouldShowEmptyState"
         class="section-table"
         :value="currentlyDisplayedTableData"
         :loading="isLoading"
