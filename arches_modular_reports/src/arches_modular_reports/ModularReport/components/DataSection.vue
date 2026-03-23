@@ -84,6 +84,9 @@ const userCanEditResourceInstance = inject(
 const nodePresentationLookup = inject("nodePresentationLookup") as Ref<
     NodePresentationLookup | undefined
 >;
+const hideEmptyFields = inject("hideEmptyFields") as {
+    hideEmptyFields: Ref<boolean>;
+};
 const languageSettings = inject(
     "languageSettings",
     ref({ ACTIVE_LANGUAGE: "en", ACTIVE_LANGUAGE_DIRECTION: "ltr" }),
@@ -118,6 +121,13 @@ const isEmpty = computed(
         !searchResultsTotalCount.value &&
         !timeout,
 );
+
+const shouldShowEmptyState = computed(() => {
+    if (hideEmptyFields?.hideEmptyFields.value && isEmpty.value) {
+        return false;
+    }
+    return true;
+});
 
 const shouldShowAddButton = computed(
     () =>
@@ -278,7 +288,7 @@ function initiateSoftDelete(tileId: string) {
     </Message>
 
     <div
-        v-else-if="isEmpty"
+        v-else-if="isEmpty && shouldShowEmptyState"
         class="section-table"
     >
         <div class="p-datatable-header section-table-header">
@@ -297,7 +307,7 @@ function initiateSoftDelete(tileId: string) {
     </div>
 
     <DataTable
-        v-else
+        v-else-if="!isEmpty || shouldShowEmptyState"
         class="section-table"
         :value="currentlyDisplayedTableData"
         :loading="isLoading"
