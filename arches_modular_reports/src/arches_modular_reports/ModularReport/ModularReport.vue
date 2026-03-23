@@ -145,9 +145,13 @@ function getStorageKey(slug: string): string {
 }
 
 function loadHideEmptyFromStorage(): boolean {
-    const stored = localStorage.getItem(getStorageKey(graphSlug));
-    if (stored !== null) {
-        return stored === "true";
+    try {
+        const stored = localStorage.getItem(getStorageKey(graphSlug));
+        if (stored !== null) {
+            return stored === "true";
+        }
+    } catch {
+        // localStorage unavailable (private browsing, disabled cookies, quota exceeded)
     }
     return false;
 }
@@ -155,7 +159,11 @@ function loadHideEmptyFromStorage(): boolean {
 const hideEmptyFields = ref(loadHideEmptyFromStorage());
 
 watch(hideEmptyFields, (newValue) => {
-    localStorage.setItem(getStorageKey(graphSlug), String(newValue));
+    try {
+        localStorage.setItem(getStorageKey(graphSlug), String(newValue));
+    } catch {
+        // localStorage unavailable, ignore
+    }
 });
 
 provide("hideEmptyFields", { hideEmptyFields });
