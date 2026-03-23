@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import arches from "arches";
+import { inject } from "vue";
 import { useGettext } from "vue3-gettext";
 
 import Button from "primevue/button";
+import Checkbox from "primevue/checkbox";
+import type { Ref } from "vue";
 
 import type { SectionContent } from "@/arches_modular_reports/ModularReport/types";
 
 const { $gettext } = useGettext();
+
+const hideEmptyFields = inject("hideEmptyFields") as {
+    hideEmptyFields: Ref<boolean>;
+};
 
 enum ExportFormat {
     JSON = "json",
@@ -79,6 +86,19 @@ function exportData(exportFormat: ExportFormat) {
         >
         </Button>
     </div>
+    <div class="hide-empty-toggle">
+        <Checkbox
+            v-model="hideEmptyFields.hideEmptyFields"
+            input-id="hide-empty-fields"
+            :binary="true"
+        />
+        <label
+            for="hide-empty-fields"
+            class="hide-empty-label"
+        >
+            {{ $gettext("Hide empty fields") }}
+        </label>
+    </div>
 </template>
 
 <style scoped>
@@ -96,5 +116,16 @@ function exportData(exportFormat: ExportFormat) {
     .export-links {
         display: none;
     }
+}
+.hide-empty-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 10px;
+}
+
+.hide-empty-label {
+    color: var(--p-text-color);
+    cursor: pointer;
 }
 </style>
