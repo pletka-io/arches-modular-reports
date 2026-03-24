@@ -33,9 +33,7 @@ const props = defineProps<{
     resourceInstanceId: string;
 }>();
 
-const hideEmptyFields = inject("hideEmptyFields") as {
-    hideEmptyFields: Ref<boolean>;
-};
+const hideEmptyFields = inject("hideEmptyFields") as Ref<boolean>;
 
 const { $gettext } = useGettext();
 
@@ -72,8 +70,8 @@ const isEmpty = computed(
         !timeout,
 );
 
-const shouldShowEmptyState = computed(() => {
-    if (hideEmptyFields?.hideEmptyFields.value && isEmpty.value) {
+const shouldShowSection = computed(() => {
+    if (hideEmptyFields?.value && isEmpty.value) {
         return false;
     }
     return true;
@@ -198,7 +196,7 @@ onMounted(fetchData);
         {{ $gettext("An error occurred while fetching data.") }}
     </Message>
     <div
-        v-else-if="isEmpty && shouldShowEmptyState"
+        v-else-if="isEmpty && shouldShowSection"
         class="section-table"
     >
         <div class="p-datatable-header section-table-header">
@@ -210,7 +208,7 @@ onMounted(fetchData);
     </div>
 
     <DataTable
-        v-else-if="!isEmpty || shouldShowEmptyState"
+        v-else
         class="section-table"
         :value="currentlyDisplayedTableData"
         :loading="isLoading"

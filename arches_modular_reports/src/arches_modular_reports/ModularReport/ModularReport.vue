@@ -166,7 +166,7 @@ watch(hideEmptyFields, (newValue) => {
     }
 });
 
-provide("hideEmptyFields", { hideEmptyFields });
+provide("hideEmptyFields", hideEmptyFields);
 
 const reportKey = ref(0);
 
