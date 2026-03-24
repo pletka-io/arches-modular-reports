@@ -11,9 +11,7 @@ import type { SectionContent } from "@/arches_modular_reports/ModularReport/type
 
 const { $gettext } = useGettext();
 
-const hideEmptyFields = inject("hideEmptyFields") as {
-    hideEmptyFields: Ref<boolean>;
-};
+const hideEmptyFields = inject("hideEmptyFields") as Ref<boolean>;
 
 enum ExportFormat {
     JSON = "json",
@@ -88,7 +86,7 @@ function exportData(exportFormat: ExportFormat) {
     </div>
     <div class="hide-empty-toggle">
         <Checkbox
-            v-model="hideEmptyFields.hideEmptyFields"
+            v-model="hideEmptyFields"
             input-id="hide-empty-fields"
             :binary="true"
         />
@@ -113,7 +111,8 @@ function exportData(exportFormat: ExportFormat) {
     color: var(--p-text-color);
 }
 @media print {
-    .export-links {
+    .export-links,
+    .hide-empty-toggle {
         display: none;
     }
 }
