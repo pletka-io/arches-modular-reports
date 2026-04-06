@@ -195,8 +195,12 @@ onMounted(fetchData);
     >
         {{ $gettext("An error occurred while fetching data.") }}
     </Message>
+    <template v-else-if="isEmpty && !shouldShowSection">
+        <!-- Hidden: empty section with hide toggle enabled -->
+    </template>
+
     <div
-        v-else-if="isEmpty && shouldShowSection"
+        v-else-if="isEmpty"
         class="section-table"
     >
         <div class="p-datatable-header section-table-header">
