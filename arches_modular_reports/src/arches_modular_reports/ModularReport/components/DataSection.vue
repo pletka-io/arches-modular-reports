@@ -116,16 +116,12 @@ const isEmpty = computed(
     () =>
         !isLoading.value &&
         !query.value &&
-        !searchResultsTotalCount.value &&
-        !timeout,
+        !searchResultsTotalCount.value,
 );
 
-const shouldShowSection = computed(() => {
-    if (hideEmptyFields?.value && isEmpty.value && !shouldShowAddButton.value) {
-        return false;
-    }
-    return true;
-});
+const shouldShowSection = computed(
+    () => !(hideEmptyFields?.value && isEmpty.value),
+);
 
 const shouldShowAddButton = computed(
     () =>
@@ -285,8 +281,12 @@ function initiateSoftDelete(tileId: string) {
         {{ $gettext("An error occurred while fetching data.") }}
     </Message>
 
+    <template v-else-if="isEmpty && !shouldShowSection">
+        <!-- Hidden: empty section with hide toggle enabled -->
+    </template>
+
     <div
-        v-else-if="isEmpty && shouldShowSection"
+        v-else-if="isEmpty"
         class="section-table"
     >
         <div class="p-datatable-header section-table-header">
