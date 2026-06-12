@@ -100,6 +100,15 @@ onMounted(fetchData);
 
 <template>
     <Panel style="border: 0; border-radius: 0">
+        <div
+            v-if="imageNodeData"
+            class="image-container"
+        >
+            <img
+                :src="imageUrl"
+                :alt="imageAltText"
+            />
+        </div>
         <div class="data-container">
             <Message
                 v-if="hasLoadingError"
@@ -117,15 +126,6 @@ onMounted(fetchData);
                     :display-data="displayDataByAlias[nodeAlias]"
                 />
             </template>
-        </div>
-        <div
-            v-if="imageNodeData"
-            class="image-container"
-        >
-            <img
-                :src="imageUrl"
-                :alt="imageAltText"
-            />
         </div>
     </Panel>
 </template>
@@ -159,7 +159,7 @@ img {
     width: 100%;
     height: auto;
     object-fit: contain;
-    align-self: end;
+    align-self: start;
 }
 
 @media print {
