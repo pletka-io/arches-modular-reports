@@ -382,9 +382,21 @@ watch(softDeleteTileRequestId, async () => {
         return;
     }
 
+    const resolvedTilePath =
+        selectedTilePath.value ??
+        findTilePathInResourceData(
+            resourceData,
+            requestedNodegroupAlias,
+            requestedTileId,
+        );
+
+    if (!resolvedTilePath) {
+        return;
+    }
+
     onToggleSoftDelete({
         softDeleteKey: requestedTileId,
-        nodegroupValuePath: selectedTilePath.value!,
+        nodegroupValuePath: resolvedTilePath,
         nextIsSoftDeleted: true,
     });
 });
@@ -533,6 +545,10 @@ function removeValueAtPath(
     targetRoot: Record<string | number, unknown>,
     pathSegments: Array<string | number>,
 ) {
+    if (!pathSegments || pathSegments.length === 0) {
+        return;
+    }
+
     const lastSegment = pathSegments[pathSegments.length - 1];
     if (lastSegment == null) {
         return;

@@ -639,18 +639,28 @@ def prepare_links(
                         links.append(
                             {
                                 "is_file": True,
-                                "altText": file.get("altText", {}).get(
-                                    request_language
-                                )["value"],
-                                "attribution": file.get("attribution", {}).get(
-                                    request_language
-                                )["value"],
-                                "title": file.get("title", {}).get(
-                                    request_language, ""
-                                )["value"],
-                                "description": file.get("description", {}).get(
-                                    request_language, ""
-                                )["value"],
+                                # File metadata is a language-keyed jsonb dict.
+                                # If the requested language has no entry,
+                                # `.get(request_language)` returns None and the
+                                # original code crashed on the subsequent
+                                # ["value"] indexing. Guard each lookup so
+                                # missing translations degrade to empty strings.
+                                "altText": (
+                                    file.get("altText", {}).get(request_language)
+                                    or {}
+                                ).get("value", ""),
+                                "attribution": (
+                                    file.get("attribution", {}).get(request_language)
+                                    or {}
+                                ).get("value", ""),
+                                "title": (
+                                    file.get("title", {}).get(request_language)
+                                    or {}
+                                ).get("value", ""),
+                                "description": (
+                                    file.get("description", {}).get(request_language)
+                                    or {}
+                                ).get("value", ""),
                                 "url": form_file_url(file["url"]),
                             }
                         )
