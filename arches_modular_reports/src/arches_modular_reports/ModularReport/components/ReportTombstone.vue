@@ -34,8 +34,8 @@ const displayDataByAlias: Ref<NodeValueDisplayDataLookup | null> = ref(null);
 const imageNodeData = ref(null);
 
 interface ImageTileData {
-    display_value: string;
-    links: { alt_text: string; link: string }[];
+    display_values: string[];
+    links: { is_file: boolean; altText: string; url: string }[];
 }
 
 const firstImageTileData = computed(() => {
@@ -48,20 +48,20 @@ const imageUrl = computed(() => {
     if (isLoading.value) {
         return "";
     }
-    if (!firstImageTileData.value) {
+    if (!firstImageTileData.value?.links?.[0]?.url) {
         return arches.urls.media + "img/photo_missing.png";
     }
-    return firstImageTileData.value.links[0].link;
+    return firstImageTileData.value.links[0].url;
 });
 
 const imageAltText = computed(() => {
     if (isLoading.value) {
         return "";
     }
-    if (!firstImageTileData.value) {
+    if (!firstImageTileData.value?.links?.[0]) {
         return $gettext("Image not available");
     }
-    return firstImageTileData.value.links[0].alt_text;
+    return firstImageTileData.value.links[0].altText;
 });
 
 function bestWidgetLabel(nodeAlias: string) {
