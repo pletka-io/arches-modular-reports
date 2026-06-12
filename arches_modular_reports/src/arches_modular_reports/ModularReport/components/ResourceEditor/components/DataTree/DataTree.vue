@@ -95,7 +95,13 @@ const selectedKeys: Ref<TreeSelectionKeys> = ref({});
 const expandedKeys: Ref<TreeExpandedKeys> = ref({});
 
 const tree = computed(() => {
-    const rootNodes = Object.entries(resourceData.aliased_data).map(function ([
+    // Guard against ResourceEditor mounting before resource_data has loaded
+    // (or against fetch failures returning an empty payload). The original
+    // `Object.entries(undefined)` crashed the whole modular-report render and
+    // surfaced as "Unable to fetch resource" in the toolbar.
+    const aliasedData = resourceData?.aliased_data;
+    if (!aliasedData) return [];
+    const rootNodes = Object.entries(aliasedData).map(function ([
         nodegroupAlias,
         tileOrTiles,
     ]) {
