@@ -636,6 +636,8 @@ def prepare_links(
                     )
                 case "file-list":
                     for file in tile_val:
+                        if not file.get("url"):
+                            continue
                         links.append(
                             {
                                 "is_file": True,
