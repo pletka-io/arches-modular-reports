@@ -14,7 +14,7 @@ import {
 import { RESOURCE_LIMIT_FOR_HEADER } from "@/arches_modular_reports/constants.ts";
 import LabeledNodeValues from "@/arches_modular_reports/ModularReport/components/LabeledNodeValues.vue";
 
-import "mapbox-gl/dist/mapbox-gl.css";
+// mapbox-gl css ships globally via arches core arches.scss
 
 import type { FeatureCollection, Position } from "geojson";
 import type { Ref } from "vue";
