@@ -48,6 +48,11 @@ interface ImageTileData {
 }
 
 const imageNodeData = ref<Record<string, ImageTileData[]> | null>(null);
+const fallbackImage = ref<{
+    url: string;
+    altText: string;
+    parentReportUrl: string;
+} | null>(null);
 const mapFeatureCollection: Ref<FeatureCollection | null> = ref(null);
 const mapContainerElement = ref<HTMLDivElement | null>(null);
 
@@ -63,6 +68,9 @@ interface TombstoneMap {
 let map: TombstoneMap | null = null;
 
 const GEOMETRY_COLOR = "#2d6a9f";
+
+const UUID_PATTERN =
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 const OSM_RASTER_STYLE = {
     version: 8,
@@ -90,20 +98,26 @@ const imageUrl = computed(() => {
     if (isLoading.value) {
         return "";
     }
-    if (!firstImageTileData.value?.links?.[0]?.url) {
-        return arches.urls.media + "img/photo_missing.png";
+    if (firstImageTileData.value?.links?.[0]?.url) {
+        return firstImageTileData.value.links[0].url;
     }
-    return firstImageTileData.value.links[0].url;
+    if (fallbackImage.value) {
+        return fallbackImage.value.url;
+    }
+    return arches.urls.media + "img/photo_missing.png";
 });
 
 const imageAltText = computed(() => {
     if (isLoading.value) {
         return "";
     }
-    if (!firstImageTileData.value?.links?.[0]) {
-        return $gettext("Image not available");
+    if (firstImageTileData.value?.links?.[0]) {
+        return firstImageTileData.value.links[0].altText;
     }
-    return firstImageTileData.value.links[0].altText;
+    if (fallbackImage.value?.altText) {
+        return fallbackImage.value.altText;
+    }
+    return $gettext("Image not available");
 });
 
 function bestWidgetLabel(nodeAlias: string) {
@@ -230,6 +244,49 @@ async function fetchMapData() {
     }
 }
 
+async function fetchFallbackImage() {
+    if (
+        !config.image_node_alias ||
+        !config.image_fallback_relation_alias ||
+        firstImageTileData.value?.links?.[0]?.url
+    ) {
+        return;
+    }
+    try {
+        const relationData = await fetchNodeTileData(
+            resourceInstanceId,
+            [config.image_fallback_relation_alias],
+            1,
+        );
+        const relationLink =
+            relationData[config.image_fallback_relation_alias]?.[0]?.links?.[0];
+        const parentResourceId = relationLink?.link?.match(UUID_PATTERN)?.[0];
+        if (!parentResourceId) {
+            return;
+        }
+        const parentImageData = await fetchNodeTileData(
+            parentResourceId,
+            [config.image_node_alias],
+            1,
+        );
+        const parentImageLink = (
+            parentImageData[config.image_node_alias]?.[0] as
+                | ImageTileData
+                | undefined
+        )?.links?.[0];
+        if (!parentImageLink?.url) {
+            return;
+        }
+        fallbackImage.value = {
+            url: parentImageLink.url,
+            altText: parentImageLink.altText,
+            parentReportUrl: relationLink.link,
+        };
+    } catch {
+        // The fallback image is best-effort: on failure keep the placeholder.
+    }
+}
+
 async function fetchData() {
     isLoading.value = true;
     try {
@@ -251,7 +308,7 @@ async function fetchData() {
     } finally {
         isLoading.value = false;
     }
-    await fetchMapData();
+    await Promise.all([fetchMapData(), fetchFallbackImage()]);
 }
 
 watch(
@@ -285,6 +342,13 @@ onUnmounted(() => {
                     :src="imageUrl"
                     :alt="imageAltText"
                 />
+                <a
+                    v-if="fallbackImage"
+                    class="fallback-image-caption"
+                    :href="fallbackImage.parentReportUrl"
+                >
+                    {{ $gettext("Image from parent record") }}
+                </a>
             </div>
             <div
                 v-if="mapFeatureCollection"
@@ -344,6 +408,12 @@ onUnmounted(() => {
 .map-container {
     width: 18rem;
     height: 12rem;
+}
+
+.fallback-image-caption {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
 }
 
 img {

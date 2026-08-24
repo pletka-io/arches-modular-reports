@@ -282,6 +282,18 @@ class ReportConfig(models.Model):
             ).exists():
                 msg = f"Tombstone section contains invalid map node alias: {map_node_alias}"
                 raise ValidationError(msg)
+        if fallback_relation_alias := tombstone_config.get(
+            "image_fallback_relation_alias"
+        ):
+            if not self.graph.node_set.filter(
+                alias=fallback_relation_alias,
+                datatype__in=["resource-instance", "resource-instance-list"],
+            ).exists():
+                msg = (
+                    "Tombstone section contains invalid image fallback "
+                    f"relation alias: {fallback_relation_alias}"
+                )
+                raise ValidationError(msg)
 
     def validate_datasection(self, card_config):
         nodegroup_alias = self.get_or_raise(card_config, "nodegroup_alias", "Data")
