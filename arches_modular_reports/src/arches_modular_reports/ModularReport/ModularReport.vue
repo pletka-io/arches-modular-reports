@@ -28,6 +28,8 @@ import type {
     NamedSection,
     NodePresentationLookup,
     LanguageSettings,
+    ReportToolbarConfig,
+    SectionContent,
 } from "@/arches_modular_reports/ModularReport/types";
 
 const toast = useToast();
@@ -144,7 +146,7 @@ function getStorageKey(slug: string): string {
     return `${LOCALSTORAGE_KEY_PREFIX}${slug}`;
 }
 
-function loadHideEmptyFromStorage(): boolean {
+function loadHideEmptyFromStorage(): boolean | null {
     try {
         const stored = localStorage.getItem(getStorageKey(graphSlug));
         if (stored !== null) {
@@ -153,12 +155,18 @@ function loadHideEmptyFromStorage(): boolean {
     } catch {
         // localStorage unavailable (private browsing, disabled cookies, quota exceeded)
     }
-    return false;
+    return null;
 }
 
-const hideEmptyFields = ref(loadHideEmptyFromStorage());
+const storedHideEmptyPreference = loadHideEmptyFromStorage();
+const hideEmptyFields = ref(storedHideEmptyPreference ?? false);
+let persistHideEmptyPreference = true;
 
 watch(hideEmptyFields, (newValue) => {
+    if (!persistHideEmptyPreference) {
+        persistHideEmptyPreference = true;
+        return;
+    }
     try {
         localStorage.setItem(getStorageKey(graphSlug), String(newValue));
     } catch {
@@ -167,6 +175,60 @@ watch(hideEmptyFields, (newValue) => {
 });
 
 provide("hideEmptyFields", hideEmptyFields);
+
+const recursiveHideEmpty = ref(false);
+provide("recursiveHideEmpty", recursiveHideEmpty);
+
+function findComponentConfig(
+    section: NamedSection,
+    componentName: string,
+): SectionContent["config"] | undefined {
+    for (const component of section.components) {
+        if (component.component.split("/").pop() === componentName) {
+            return component.config;
+        }
+        for (const value of Object.values(component.config ?? {})) {
+            if (!Array.isArray(value)) {
+                continue;
+            }
+            for (const item of value) {
+                if (
+                    item &&
+                    typeof item === "object" &&
+                    "name" in item &&
+                    "components" in item
+                ) {
+                    const found = findComponentConfig(
+                        item as NamedSection,
+                        componentName,
+                    );
+                    if (found) {
+                        return found;
+                    }
+                }
+            }
+        }
+    }
+    return undefined;
+}
+
+function applyToolbarConfig(section: NamedSection) {
+    const toolbarConfig = findComponentConfig(section, "ReportToolbar") as
+        | ReportToolbarConfig
+        | undefined;
+    recursiveHideEmpty.value = toolbarConfig?.recursive_hide_empty ?? false;
+
+    const hideEmptyDefault = toolbarConfig?.hide_empty_fields_default ?? false;
+    if (
+        storedHideEmptyPreference === null &&
+        hideEmptyFields.value !== hideEmptyDefault
+    ) {
+        // Apply the configured default without persisting it, so that
+        // localStorage only wins once the user has actually toggled.
+        persistHideEmptyPreference = false;
+        hideEmptyFields.value = hideEmptyDefault;
+    }
+}
 
 const reportKey = ref(0);
 
@@ -197,6 +259,7 @@ watchEffect(async () => {
             fetchReportConfig(resourceInstanceId, reportConfigSlug).then(
                 (data) => {
                     importComponents([data], componentLookup);
+                    applyToolbarConfig(data);
                     config.value = data;
                 },
             ),

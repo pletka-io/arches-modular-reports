@@ -16,7 +16,10 @@ import {
     DESC,
     ROWS_PER_PAGE_OPTIONS,
 } from "@/arches_modular_reports/constants.ts";
-import { fetchNodegroupTileData } from "@/arches_modular_reports/ModularReport/api.ts";
+import {
+    fetchModularReportTile,
+    fetchNodegroupTileData,
+} from "@/arches_modular_reports/ModularReport/api.ts";
 import FileListViewer from "@/arches_modular_reports/ModularReport/components/FileListViewer.vue";
 import HierarchicalTileViewer from "@/arches_modular_reports/ModularReport/components/HierarchicalTileViewer.vue";
 
@@ -26,9 +29,13 @@ import type {
     LabelBasedCard,
     NodePresentationLookup,
     LanguageSettings,
+    TileData,
 } from "@/arches_modular_reports/ModularReport/types";
 
-import { formatNumber } from "@/arches_modular_reports/ModularReport/utils.ts";
+import {
+    formatNumber,
+    tileHasPopulatedChildren,
+} from "@/arches_modular_reports/ModularReport/utils.ts";
 
 const props = defineProps<{
     component: {
@@ -41,6 +48,8 @@ const props = defineProps<{
             filters:
                 | { alias: string; value: string; field_lookup: string }[]
                 | null;
+            expanded_by_default?: boolean;
+            auto_expand_if_populated?: boolean;
         };
     };
     resourceInstanceId: string;
@@ -70,6 +79,7 @@ const isLoading = ref(false);
 const hasLoadingError = ref(false);
 const resettingToFirstPage = ref(false);
 const pageNumberToNodegroupTileData = ref<Record<number, unknown[]>>({});
+const expandedRows = ref<LabelBasedCard[]>([]);
 const displayDialog = ref(false);
 const selectedRichText = ref<{ header: string; data: string } | null>(null);
 
@@ -85,6 +95,11 @@ const nodePresentationLookup = inject("nodePresentationLookup") as Ref<
     NodePresentationLookup | undefined
 >;
 const hideEmptyFields = inject("hideEmptyFields") as Ref<boolean>;
+const recursiveHideEmpty = inject(
+    "recursiveHideEmpty",
+    ref(false),
+) as Ref<boolean>;
+const graphSlug = inject<string>("graphSlug")!;
 const languageSettings = inject(
     "languageSettings",
     ref({ ACTIVE_LANGUAGE: "en", ACTIVE_LANGUAGE_DIRECTION: "ltr" }),
@@ -113,14 +128,15 @@ const first = computed(() => {
 });
 
 const isEmpty = computed(
-    () =>
-        !isLoading.value &&
-        !query.value &&
-        !searchResultsTotalCount.value,
+    () => !isLoading.value && !query.value && !searchResultsTotalCount.value,
 );
 
 const shouldShowSection = computed(
     () => !(hideEmptyFields?.value && isEmpty.value),
+);
+
+const showEmptyChildNodes = computed(
+    () => !(hideEmptyFields?.value && recursiveHideEmpty.value),
 );
 
 const shouldShowAddButton = computed(
@@ -196,7 +212,50 @@ watch(currentPage, () => {
     }
 });
 
+watch(currentlyDisplayedTableData, (rows) => {
+    applyDefaultExpansion(rows as LabelBasedCard[]);
+});
+
 onMounted(fetchData);
+
+async function applyDefaultExpansion(rows: LabelBasedCard[]) {
+    const expandedByDefault =
+        props.component.config.expanded_by_default ?? false;
+    const autoExpandIfPopulated =
+        props.component.config.auto_expand_if_populated ?? false;
+    if (!expandedByDefault && !autoExpandIfPopulated) {
+        return;
+    }
+
+    const rowsWithChildren = rows.filter(
+        (row) => row["@has_children"] === true,
+    );
+    if (expandedByDefault) {
+        expandedRows.value = rowsWithChildren;
+        return;
+    }
+
+    const populatedRows = await Promise.all(
+        rowsWithChildren.map(async (row) => {
+            try {
+                const tile = (await fetchModularReportTile(
+                    graphSlug,
+                    props.component.config.nodegroup_alias,
+                    row["@tile_id"],
+                )) as TileData;
+                return tileHasPopulatedChildren(tile) ? row : null;
+            } catch {
+                return null;
+            }
+        }),
+    );
+    if (rows !== currentlyDisplayedTableData.value) {
+        return;
+    }
+    expandedRows.value = populatedRows.filter(
+        (row): row is LabelBasedCard => row !== null,
+    );
+}
 
 async function fetchData(page: number = 1) {
     isLoading.value = true;
@@ -306,11 +365,11 @@ function initiateSoftDelete(tileId: string) {
 
     <DataTable
         v-else
+        v-model:expanded-rows="expandedRows"
         class="section-table"
         :value="currentlyDisplayedTableData"
         :loading="isLoading"
         :total-records="searchResultsTotalCount"
-        :expanded-rows="[]"
         :first="first"
         :row-class="rowClass"
         :always-show-paginator="
@@ -473,7 +532,7 @@ function initiateSoftDelete(tileId: string) {
                 :nodegroup-alias="props.component.config.nodegroup_alias"
                 :tile-id="slotProps.data['@tile_id']"
                 :custom-labels="props.component.config.custom_labels"
-                :show-empty-nodes="true"
+                :show-empty-nodes="showEmptyChildNodes"
             />
         </template>
     </DataTable>
