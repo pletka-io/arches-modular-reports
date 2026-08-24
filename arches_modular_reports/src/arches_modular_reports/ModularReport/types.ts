@@ -140,6 +140,12 @@ export interface LabelBasedCard {
     [key: string]: boolean | string | null;
 }
 
+export interface ReportToolbarConfig {
+    export_formats?: string[];
+    hide_empty_fields_default?: boolean;
+    recursive_hide_empty?: boolean;
+}
+
 export interface NumberFormat {
     format: string;
     prefix: Record<string, string>;

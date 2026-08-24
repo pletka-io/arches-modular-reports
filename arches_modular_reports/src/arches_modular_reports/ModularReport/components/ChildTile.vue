@@ -2,6 +2,7 @@
 import { computed, inject } from "vue";
 
 import ChildTileNodeValue from "@/arches_modular_reports/ModularReport/components/ChildTileNodeValue.vue";
+import { tileIsPopulated } from "@/arches_modular_reports/ModularReport/utils.ts";
 
 import type { Ref } from "vue";
 import type {
@@ -44,15 +45,17 @@ const visibleChildren = computed(() => {
     return Object.entries(data.aliased_data).reduce(
         (acc, [nodeAlias, nodeValue]) => {
             if (
-                (showEmptyNodes || nodeValueIsEmpty(nodeValue)) &&
                 isTileorTiles(nodeValue) &&
                 nodePresentationLookup.value![nodeAlias]?.visible
             ) {
-                if (Array.isArray(nodeValue)) {
-                    acc.push(...nodeValue);
-                } else {
-                    acc.push(nodeValue as TileData);
-                }
+                const childTiles = (
+                    Array.isArray(nodeValue) ? nodeValue : [nodeValue]
+                ) as TileData[];
+                acc.push(
+                    ...childTiles.filter(
+                        (child) => showEmptyNodes || tileIsPopulated(child),
+                    ),
+                );
             }
             return acc;
         },
@@ -76,7 +79,7 @@ function shouldShowNode(
 ) {
     const [nodeAlias, nodeValue] = nodeAliasValuePair;
     return (
-        (showEmptyNodes || nodeValueIsEmpty(nodeValue)) &&
+        (showEmptyNodes || !nodeValueIsEmpty(nodeValue)) &&
         !isTileorTiles(nodeValue) &&
         nodePresentationLookup.value![nodeAlias]?.visible
     );

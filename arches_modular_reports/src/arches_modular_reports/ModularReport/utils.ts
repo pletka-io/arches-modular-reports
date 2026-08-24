@@ -6,10 +6,12 @@ import type { Ref } from "vue";
 import type {
     ComponentLookup,
     NamedSection,
+    NodeData,
     NodeValueDisplayData,
     SectionContent,
     LanguageSettings,
     NumberFormat,
+    TileData,
 } from "@/arches_modular_reports/ModularReport/types";
 
 export function uniqueId(_unused: unknown) {
@@ -31,6 +33,34 @@ export async function importComponents(
             };
         });
     });
+}
+
+function isTileOrTileArray(input: unknown): boolean {
+    return Boolean(
+        (input as TileData)?.tileid ||
+            (Array.isArray(input) && input.every((item) => item.tileid)),
+    );
+}
+
+function asTileArray(input: unknown): TileData[] {
+    return (Array.isArray(input) ? input : [input]) as TileData[];
+}
+
+export function tileIsPopulated(tile: TileData): boolean {
+    return Object.values(tile.aliased_data).some((value) => {
+        if (isTileOrTileArray(value)) {
+            return asTileArray(value).some(tileIsPopulated);
+        }
+        return (value as NodeData | null)?.node_value != null;
+    });
+}
+
+export function tileHasPopulatedChildren(tile: TileData): boolean {
+    return Object.values(tile.aliased_data).some(
+        (value) =>
+            isTileOrTileArray(value) &&
+            asTileArray(value).some(tileIsPopulated),
+    );
 }
 
 export function truncateDisplayData(
