@@ -6,6 +6,7 @@ from arches_modular_reports.app.views.modular_report import (
     ModularReportAwareResourceReportView,
     GraphSlugFromIdView,
     NodegroupTileDataView,
+    NodeGeoJSONView,
     NodePresentationView,
     NodeTileDataView,
     ModularReportConfigView,
@@ -58,6 +59,11 @@ urlpatterns = [
         "api/node_tile_data/<uuid:resourceid>",
         NodeTileDataView.as_view(),
         name="api_node_tile_data",
+    ),
+    path(
+        "api/node_geojson/<uuid:resourceid>",
+        NodeGeoJSONView.as_view(),
+        name="api_node_geojson",
     ),
     path(
         "api/has_permissions",

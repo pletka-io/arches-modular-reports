@@ -438,6 +438,48 @@ class NodeTileDataView(APIBase):
         )
 
 
+@method_decorator(can_read_resource_instance, name="dispatch")
+class NodeGeoJSONView(APIBase):
+    """Return GeoJSON FeatureCollections for geojson-feature-collection
+    nodes by alias. These nodes are excluded from NodeTileDataView
+    (which only produces display values), so the raw geometry is
+    exposed here for map rendering."""
+
+    def get(self, request, resourceid):
+        permitted_nodegroups = get_nodegroups_by_perm(request.user, "read_nodegroup")
+        node_aliases = request.GET.getlist("node_alias", [])
+
+        nodes = models.Node.objects.filter(
+            alias__in=node_aliases,
+            graph__resourceinstance__pk=resourceid,
+            nodegroup__in=permitted_nodegroups,
+            datatype="geojson-feature-collection",
+        )
+
+        feature_collection_by_alias = {}
+        for node in nodes:
+            features = []
+            tile_data = (
+                models.TileModel.objects.filter(
+                    resourceinstance_id=resourceid,
+                    nodegroup_id=node.nodegroup_id,
+                )
+                .order_by("sortorder")
+                .values_list("data", flat=True)
+            )
+            for data in tile_data:
+                node_value = (data or {}).get(str(node.pk))
+                if node_value:
+                    features.extend(node_value.get("features", []))
+            feature_collection_by_alias[node.alias] = (
+                {"type": "FeatureCollection", "features": features}
+                if features
+                else None
+            )
+
+        return JSONResponse(feature_collection_by_alias)
+
+
 class UserPermissionsView(APIBase):
     def get(self, request):
         reqested_permissions = json.loads(request.GET.get("permissions", "[]"))

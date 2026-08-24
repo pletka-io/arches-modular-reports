@@ -276,6 +276,12 @@ class ReportConfig(models.Model):
             ).exists():
                 msg = f"Tombstone section contains invalid image node alias: {image_node_alias}"
                 raise ValidationError(msg)
+        if map_node_alias := tombstone_config.get("map_node_alias"):
+            if not self.graph.node_set.filter(
+                alias=map_node_alias, datatype="geojson-feature-collection"
+            ).exists():
+                msg = f"Tombstone section contains invalid map node alias: {map_node_alias}"
+                raise ValidationError(msg)
 
     def validate_datasection(self, card_config):
         nodegroup_alias = self.get_or_raise(card_config, "nodegroup_alias", "Data")
