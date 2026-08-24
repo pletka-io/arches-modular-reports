@@ -140,6 +140,13 @@ export interface LabelBasedCard {
     [key: string]: boolean | string | null;
 }
 
+export interface ReportTombstoneConfig {
+    node_aliases: string[];
+    custom_labels?: Record<string, string>;
+    image_node_alias?: string | null;
+    map_node_alias?: string | null;
+}
+
 export interface ReportToolbarConfig {
     export_formats?: string[];
     hide_empty_fields_default?: boolean;

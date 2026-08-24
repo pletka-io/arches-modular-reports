@@ -248,3 +248,18 @@ export const fetchLanguageSettings = async () => {
     if (!response.ok) throw new Error(parsed.message || response.statusText);
     return parsed;
 };
+
+export const fetchNodeGeoJSON = async (
+    resourceInstanceId: string,
+    nodeAliases: string[],
+) => {
+    const params = new URLSearchParams();
+    nodeAliases.forEach((alias) => params.append("node_alias", alias));
+
+    const response = await fetch(
+        `${arches.urls.api_node_geojson(resourceInstanceId)}?${params}`,
+    );
+    const parsed = await response.json();
+    if (!response.ok) throw new Error(parsed.message || response.statusText);
+    return parsed;
+};
