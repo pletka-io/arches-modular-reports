@@ -27,6 +27,7 @@ import type { Ref } from "vue";
 import type { DataTablePageEvent } from "primevue/datatable";
 import type {
     LabelBasedCard,
+    NodeData,
     NodePresentationLookup,
     LanguageSettings,
     TileData,
@@ -35,6 +36,7 @@ import type {
 import {
     formatNumber,
     tileHasPopulatedChildren,
+    tileIsPopulated,
 } from "@/arches_modular_reports/ModularReport/utils.ts";
 
 const props = defineProps<{
@@ -50,6 +52,7 @@ const props = defineProps<{
                 | null;
             expanded_by_default?: boolean;
             auto_expand_if_populated?: boolean;
+            inline_children?: boolean;
         };
     };
     resourceInstanceId: string;
@@ -80,6 +83,7 @@ const hasLoadingError = ref(false);
 const resettingToFirstPage = ref(false);
 const pageNumberToNodegroupTileData = ref<Record<number, unknown[]>>({});
 const expandedRows = ref<LabelBasedCard[]>([]);
+const inlineChildrenText = ref<Record<string, string>>({});
 const displayDialog = ref(false);
 const selectedRichText = ref<{ header: string; data: string } | null>(null);
 
@@ -137,6 +141,10 @@ const shouldShowSection = computed(
 
 const showEmptyChildNodes = computed(
     () => !(hideEmptyFields?.value && recursiveHideEmpty.value),
+);
+
+const isInlineChildrenMode = computed(
+    () => props.component.config.inline_children ?? false,
 );
 
 const shouldShowAddButton = computed(
@@ -214,11 +222,114 @@ watch(currentPage, () => {
 
 watch(currentlyDisplayedTableData, (rows) => {
     applyDefaultExpansion(rows as LabelBasedCard[]);
+    loadInlineChildrenText(rows as LabelBasedCard[]);
 });
 
 onMounted(fetchData);
 
+function isTileOrTileArray(input: unknown): boolean {
+    return Boolean(
+        (input as TileData)?.tileid ||
+            (Array.isArray(input) && input.every((item) => item.tileid)),
+    );
+}
+
+function childTilesOf(tile: TileData): TileData[] {
+    if (!nodePresentationLookup.value) {
+        return [];
+    }
+    return Object.entries(tile.aliased_data).reduce(
+        (acc, [nodeAlias, nodeValue]) => {
+            if (
+                isTileOrTileArray(nodeValue) &&
+                nodePresentationLookup.value![nodeAlias]?.visible
+            ) {
+                const childTiles = (
+                    Array.isArray(nodeValue) ? nodeValue : [nodeValue]
+                ) as TileData[];
+                acc.push(...childTiles);
+            }
+            return acc;
+        },
+        [] as TileData[],
+    );
+}
+
+function inlineChildTileLabel(nodeAlias: string) {
+    return (
+        props.component.config.custom_labels?.[nodeAlias] ??
+        nodePresentationLookup.value?.[nodeAlias]?.widget_label ??
+        nodeAlias
+    );
+}
+
+function inlineChildTileText(tile: TileData): string {
+    if (!nodePresentationLookup.value) {
+        return "";
+    }
+    return Object.entries(tile.aliased_data)
+        .filter(([nodeAlias, nodeValue]) => {
+            return (
+                !isTileOrTileArray(nodeValue) &&
+                (nodeValue as NodeData | null)?.node_value != null &&
+                nodePresentationLookup.value![nodeAlias]?.visible
+            );
+        })
+        .map(([nodeAlias, nodeValue]) => {
+            return `${inlineChildTileLabel(nodeAlias)}: ${
+                (nodeValue as NodeData).display_value
+            }`;
+        })
+        .join(", ");
+}
+
+function buildInlineChildrenText(tile: TileData): string {
+    return childTilesOf(tile)
+        .filter(tileIsPopulated)
+        .map(inlineChildTileText)
+        .filter((text) => text.length > 0)
+        .join("; ");
+}
+
+async function loadInlineChildrenText(rows: LabelBasedCard[]) {
+    if (!isInlineChildrenMode.value) {
+        return;
+    }
+
+    const rowsToFetch = rows.filter(
+        (row) =>
+            row["@has_children"] === true &&
+            !(row["@tile_id"] in inlineChildrenText.value),
+    );
+
+    await Promise.all(
+        rowsToFetch.map(async (row) => {
+            const tileId = row["@tile_id"];
+            try {
+                const tile = (await fetchModularReportTile(
+                    graphSlug,
+                    props.component.config.nodegroup_alias,
+                    tileId,
+                )) as TileData;
+                inlineChildrenText.value = {
+                    ...inlineChildrenText.value,
+                    [tileId]: buildInlineChildrenText(tile),
+                };
+            } catch {
+                inlineChildrenText.value = {
+                    ...inlineChildrenText.value,
+                    [tileId]: "",
+                };
+            }
+        }),
+    );
+}
+
 async function applyDefaultExpansion(rows: LabelBasedCard[]) {
+    if (isInlineChildrenMode.value) {
+        return;
+    }
+
     const expandedByDefault =
         props.component.config.expanded_by_default ?? false;
     const autoExpandIfPopulated =
@@ -424,6 +535,7 @@ function initiateSoftDelete(tileId: string) {
         </template>
 
         <Column
+            v-if="!isInlineChildrenMode"
             expander
             class="expander-column"
         />
@@ -487,6 +599,15 @@ function initiateSoftDelete(tileId: string) {
             </template>
         </Column>
         <Column
+            v-if="isInlineChildrenMode"
+            :header="$gettext('Details')"
+            class="inline-children-column"
+        >
+            <template #body="{ data }">
+                {{ inlineChildrenText[data["@tile_id"]] ?? "" }}
+            </template>
+        </Column>
+        <Column
             v-if="
                 userCanEditResourceInstance &&
                 props.component.config.has_write_permission
@@ -527,7 +648,10 @@ function initiateSoftDelete(tileId: string) {
                 </div>
             </template>
         </Column>
-        <template #expansion="slotProps">
+        <template
+            v-if="!isInlineChildrenMode"
+            #expansion="slotProps"
+        >
             <HierarchicalTileViewer
                 :nodegroup-alias="props.component.config.nodegroup_alias"
                 :tile-id="slotProps.data['@tile_id']"
