@@ -46,7 +46,13 @@ def update_report_configuration_with_nodegroup_permissions(
 
                         config[key] = filtered
 
-                        looks_like_data_section = "graph_slug" not in config
+                        looks_like_data_section = (
+                            "graph_slug" not in config
+                            # A tombstone may legitimately carry no field
+                            # aliases and still render an image or a map.
+                            and not config.get("image_node_alias")
+                            and not config.get("map_node_alias")
+                        )
                         if not filtered and looks_like_data_section:
                             return None
 
