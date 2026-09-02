@@ -173,6 +173,38 @@ const columnData = computed(() => {
     });
 });
 
+// With "hide empty fields" on, drop columns that hold no value in any row of
+// the current page. Only affects the read-only table; the editor still
+// offers every node of the nodegroup.
+function cellHasValue(cell: unknown): boolean {
+    if (!cell || typeof cell !== "object") {
+        return false;
+    }
+    const nodeData = cell as {
+        display_value?: unknown;
+        is_file?: boolean;
+        file_data?: unknown[];
+    };
+    if (nodeData.is_file) {
+        return Boolean(nodeData.file_data?.length);
+    }
+    const value = nodeData.display_value;
+    if (Array.isArray(value)) {
+        return value.length > 0;
+    }
+    return value != null && String(value).trim() !== "";
+}
+
+const visibleColumnData = computed(() => {
+    const rows = currentlyDisplayedTableData.value as Record<string, unknown>[];
+    if (!hideEmptyFields?.value || rows.length === 0) {
+        return columnData.value;
+    }
+    return columnData.value.filter((column) =>
+        rows.some((row) => cellHasValue(row[column.nodeAlias])),
+    );
+});
+
 const cardinality = computed(() => {
     const firstNodeAlias = props.component.config.node_aliases[0];
     if (!nodePresentationLookup.value || !firstNodeAlias) {
@@ -540,7 +572,7 @@ function initiateSoftDelete(tileId: string) {
             class="expander-column"
         />
         <Column
-            v-for="columnDatum of columnData"
+            v-for="columnDatum of visibleColumnData"
             :key="columnDatum.nodeAlias"
             :field="columnDatum.nodeAlias"
             :header="columnDatum.widgetLabel"
