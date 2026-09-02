@@ -148,6 +148,12 @@ export interface ReportTombstoneConfig {
     map_node_alias?: string | null;
 }
 
+export interface MapSectionConfig {
+    node_alias: string;
+    custom_card_name?: string | null;
+    height?: string | null;
+}
+
 export interface ReportToolbarConfig {
     export_formats?: string[];
     hide_empty_fields_default?: boolean;

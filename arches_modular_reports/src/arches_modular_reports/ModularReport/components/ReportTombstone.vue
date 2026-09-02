@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import arches from "arches";
-import mapboxgl from "mapbox-gl";
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { useGettext } from "vue3-gettext";
 
@@ -13,10 +12,12 @@ import {
 } from "@/arches_modular_reports/ModularReport/api.ts";
 import { RESOURCE_LIMIT_FOR_HEADER } from "@/arches_modular_reports/constants.ts";
 import LabeledNodeValues from "@/arches_modular_reports/ModularReport/components/LabeledNodeValues.vue";
+import { createGeometryMap } from "@/arches_modular_reports/ModularReport/utils/geometry-map.ts";
 
 // mapbox-gl css ships globally via arches core arches.scss
 
-import type { FeatureCollection, Position } from "geojson";
+import type { FeatureCollection } from "geojson";
+import type { GeometryMap } from "@/arches_modular_reports/ModularReport/utils/geometry-map.ts";
 import type { Ref } from "vue";
 import type {
     NodePresentationLookup,
@@ -56,36 +57,10 @@ const fallbackImage = ref<{
 const mapFeatureCollection: Ref<FeatureCollection | null> = ref(null);
 const mapContainerElement = ref<HTMLDivElement | null>(null);
 
-// Minimal typing for the untyped mapbox-gl (v1) module resolved
-// from arches core dependencies.
-interface TombstoneMap {
-    on(event: string, handler: () => void): void;
-    addSource(sourceId: string, source: unknown): void;
-    addLayer(layer: unknown): void;
-    remove(): void;
-}
-
-let map: TombstoneMap | null = null;
-
-const GEOMETRY_COLOR = "#2d6a9f";
+let map: GeometryMap | null = null;
 
 const UUID_PATTERN =
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-
-const OSM_RASTER_STYLE = {
-    version: 8,
-    sources: {
-        osm: {
-            type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize: 256,
-            attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxzoom: 19,
-        },
-    },
-    layers: [{ id: "osm", type: "raster", source: "osm" }],
-};
 
 const firstImageTileData = computed(() => {
     if (!config.image_node_alias) {
@@ -126,103 +101,6 @@ function bestWidgetLabel(nodeAlias: string) {
         nodePresentationLookup.value?.[nodeAlias].widget_label ??
         nodeAlias
     );
-}
-
-function collectPositions(coordinates: unknown, positions: Position[]) {
-    if (!Array.isArray(coordinates)) {
-        return;
-    }
-    if (typeof coordinates[0] === "number") {
-        positions.push(coordinates as Position);
-        return;
-    }
-    for (const nested of coordinates) {
-        collectPositions(nested, positions);
-    }
-}
-
-function computeBounds(featureCollection: FeatureCollection) {
-    const positions: Position[] = [];
-    for (const feature of featureCollection.features) {
-        if (!feature.geometry) {
-            continue;
-        }
-        if (feature.geometry.type === "GeometryCollection") {
-            for (const geometry of feature.geometry.geometries) {
-                if ("coordinates" in geometry) {
-                    collectPositions(geometry.coordinates, positions);
-                }
-            }
-        } else {
-            collectPositions(feature.geometry.coordinates, positions);
-        }
-    }
-    if (!positions.length) {
-        return null;
-    }
-    const longitudes = positions.map((position) => position[0]);
-    const latitudes = positions.map((position) => position[1]);
-    return [
-        [Math.min(...longitudes), Math.min(...latitudes)],
-        [Math.max(...longitudes), Math.max(...latitudes)],
-    ];
-}
-
-function createMap(
-    container: HTMLDivElement,
-    featureCollection: FeatureCollection,
-) {
-    const bounds = computeBounds(featureCollection);
-    if (!bounds) {
-        return;
-    }
-    const tombstoneMap: TombstoneMap = new mapboxgl.Map({
-        container,
-        style: OSM_RASTER_STYLE,
-        interactive: false,
-        attributionControl: true,
-        bounds,
-        fitBoundsOptions: { padding: 24, maxZoom: 15 },
-    });
-    tombstoneMap.on("load", () => {
-        tombstoneMap.addSource("tombstone-geometry", {
-            type: "geojson",
-            data: featureCollection,
-        });
-        tombstoneMap.addLayer({
-            id: "tombstone-geometry-fill",
-            type: "fill",
-            source: "tombstone-geometry",
-            filter: ["==", "$type", "Polygon"],
-            paint: {
-                "fill-color": GEOMETRY_COLOR,
-                "fill-opacity": 0.2,
-            },
-        });
-        tombstoneMap.addLayer({
-            id: "tombstone-geometry-line",
-            type: "line",
-            source: "tombstone-geometry",
-            filter: ["!=", "$type", "Point"],
-            paint: {
-                "line-color": GEOMETRY_COLOR,
-                "line-width": 2,
-            },
-        });
-        tombstoneMap.addLayer({
-            id: "tombstone-geometry-point",
-            type: "circle",
-            source: "tombstone-geometry",
-            filter: ["==", "$type", "Point"],
-            paint: {
-                "circle-color": GEOMETRY_COLOR,
-                "circle-radius": 6,
-                "circle-stroke-color": "#ffffff",
-                "circle-stroke-width": 1.5,
-            },
-        });
-    });
-    map = tombstoneMap;
 }
 
 async function fetchMapData() {
@@ -315,7 +193,9 @@ watch(
     [mapFeatureCollection, mapContainerElement],
     ([featureCollection, container]) => {
         if (featureCollection && container && !map) {
-            createMap(container, featureCollection);
+            map = createGeometryMap(container, featureCollection, {
+                interactive: false,
+            });
         }
     },
 );
