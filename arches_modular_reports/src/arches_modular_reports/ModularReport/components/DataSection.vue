@@ -200,9 +200,12 @@ const visibleColumnData = computed(() => {
     if (!hideEmptyFields?.value || rows.length === 0) {
         return columnData.value;
     }
-    return columnData.value.filter((column) =>
+    const populated = columnData.value.filter((column) =>
         rows.some((row) => cellHasValue(row[column.nodeAlias])),
     );
+    // Rows with no readable value at all (e.g. anonymous viewers): keep the
+    // headers rather than render a table with zero columns.
+    return populated.length ? populated : columnData.value;
 });
 
 const cardinality = computed(() => {
