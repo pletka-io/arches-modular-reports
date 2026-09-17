@@ -1,3 +1,4 @@
+import arches from "arches";
 import mapboxgl from "mapbox-gl";
 
 import type { FeatureCollection, Position } from "geojson";
@@ -14,6 +15,12 @@ export interface GeometryMap {
 
 const GEOMETRY_COLOR = "#2d6a9f";
 
+// Basemap: Mapbox Streets with the project's key (the same basemap the Arches
+// search map uses). tile.openstreetmap.org is a volunteer service whose usage
+// policy forbids app use; it blocked this site (403) on 2026-09-17, so OSM
+// raster tiles are only a fallback for installs without a Mapbox key.
+const MAPBOX_STREETS_STYLE = "mapbox://styles/mapbox/streets-v11";
+
 const OSM_RASTER_STYLE = {
     version: 8,
     sources: {
@@ -28,6 +35,15 @@ const OSM_RASTER_STYLE = {
     },
     layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
+
+function basemapStyle() {
+    const key = (arches as { mapboxApiKey?: string }).mapboxApiKey;
+    if (key) {
+        mapboxgl.accessToken = key;
+        return MAPBOX_STREETS_STYLE;
+    }
+    return OSM_RASTER_STYLE;
+}
 
 function collectPositions(coordinates: unknown, positions: Position[]) {
     if (!Array.isArray(coordinates)) {
@@ -84,7 +100,7 @@ export function createGeometryMap(
     }
     const map: GeometryMap = new mapboxgl.Map({
         container,
-        style: OSM_RASTER_STYLE,
+        style: basemapStyle(),
         interactive: options.interactive,
         attributionControl: true,
         bounds,
