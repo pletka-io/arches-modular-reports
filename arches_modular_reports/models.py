@@ -86,6 +86,10 @@ class ReportConfig(models.Model):
                         "node_aliases": [],
                         "image_node_alias": None,
                         "custom_labels": {},
+                        # value_prefix_aliases: {node alias: other node alias in the
+                        # same nodegroup} shows "<other value>: <value>" per tile,
+                        # e.g. {"period": "period_type"} -> "Start Period: LH IIIB".
+                        "value_prefix_aliases": {},
                     },
                 },
                 {
@@ -281,6 +285,16 @@ class ReportConfig(models.Model):
                 alias=map_node_alias, datatype="geojson-feature-collection"
             ).exists():
                 msg = f"Tombstone section contains invalid map node alias: {map_node_alias}"
+                raise ValidationError(msg)
+        for alias, prefix_alias in (
+            tombstone_config.get("value_prefix_aliases") or {}
+        ).items():
+            pair = self.graph.node_set.filter(alias__in=[alias, prefix_alias])
+            if pair.count() != 2 or len({n.nodegroup_id for n in pair}) != 1:
+                msg = (
+                    "Tombstone value_prefix_aliases needs two node aliases of one "
+                    f"nodegroup: {alias}: {prefix_alias}"
+                )
                 raise ValidationError(msg)
         if fallback_relation_alias := tombstone_config.get(
             "image_fallback_relation_alias"

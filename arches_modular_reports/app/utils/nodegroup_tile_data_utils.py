@@ -194,13 +194,15 @@ def annotate_node_values(
                     Cast(OuterRef("nodeid"), output_field=TextField()),
                     output_field=JSONField(),
                 ),
+                # lets the header pair values of two nodes of one tile
+                tile_id=Cast(F("tileid"), output_field=TextField()),
             ),
         )
         .exclude(json_object__display_value="")
         .exclude(json_object__tile_value=None)
         # This will work on Django 5.1+
         # .distinct("json_object__display_value", "sortorder")
-        .order_by("sortorder")
+        .order_by("sortorder", "tileid")
         .values("json_object")
     )
     if tile_limit:
