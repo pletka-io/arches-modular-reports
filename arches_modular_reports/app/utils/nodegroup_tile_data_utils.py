@@ -650,16 +650,14 @@ def prepare_links(
                                 # ["value"] indexing. Guard each lookup so
                                 # missing translations degrade to empty strings.
                                 "altText": (
-                                    file.get("altText", {}).get(request_language)
-                                    or {}
+                                    file.get("altText", {}).get(request_language) or {}
                                 ).get("value", ""),
                                 "attribution": (
                                     file.get("attribution", {}).get(request_language)
                                     or {}
                                 ).get("value", ""),
                                 "title": (
-                                    file.get("title", {}).get(request_language)
-                                    or {}
+                                    file.get("title", {}).get(request_language) or {}
                                 ).get("value", ""),
                                 "description": (
                                     file.get("description", {}).get(request_language)
