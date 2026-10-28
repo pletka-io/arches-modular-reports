@@ -419,6 +419,7 @@ class NodeTileDataView(APIBase):
             {
                 node.alias: [
                     {
+                        "tile_id": display_object.get("tile_id"),
                         "display_values": array_from_string(
                             display_object["display_value"]
                         ),

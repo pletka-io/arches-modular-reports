@@ -82,6 +82,7 @@ export interface ReferenceDetails {
 }
 
 export interface NodeValueDisplayData {
+    tile_id?: string;
     display_values: string[];
     links: {
         label: string;
@@ -143,6 +144,9 @@ export interface LabelBasedCard {
 export interface ReportTombstoneConfig {
     node_aliases: string[];
     custom_labels?: Record<string, string>;
+    // {alias: other alias in the same nodegroup}: each value is shown as
+    // "<other value>: <value>", paired per tile.
+    value_prefix_aliases?: Record<string, string>;
     image_node_alias?: string | null;
     image_fallback_relation_alias?: string | null;
     map_node_alias?: string | null;

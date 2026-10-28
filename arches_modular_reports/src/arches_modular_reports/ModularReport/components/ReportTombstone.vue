@@ -21,6 +21,7 @@ import type { GeometryMap } from "@/arches_modular_reports/ModularReport/utils/g
 import type { Ref } from "vue";
 import type {
     NodePresentationLookup,
+    NodeValueDisplayData,
     NodeValueDisplayDataLookup,
     ReportTombstoneConfig,
     SectionContent,
@@ -94,6 +95,47 @@ const imageAltText = computed(() => {
     }
     return $gettext("Image not available");
 });
+
+// Aliases to fetch: the shown ones plus those that only prefix a value.
+const fetchedAliases = computed(() => {
+    const prefixes = Object.values(config.value_prefix_aliases ?? {});
+    return [...new Set([...config.node_aliases, ...prefixes])];
+});
+
+// Values of nodeAlias, each prefixed with the value its prefix node holds
+// on the same tile ("Start Period: Late Helladic IIIB period").
+function displayDataFor(nodeAlias: string): NodeValueDisplayData[] {
+    const data = displayDataByAlias.value?.[nodeAlias] ?? [];
+    const prefixAlias = config.value_prefix_aliases?.[nodeAlias];
+    if (!prefixAlias) {
+        return data;
+    }
+    const prefixByTile = new Map<string, string>();
+    for (const entry of displayDataByAlias.value?.[prefixAlias] ?? []) {
+        if (entry.tile_id) {
+            prefixByTile.set(
+                entry.tile_id,
+                entry.links.length
+                    ? entry.links.map((link) => link.label).join(", ")
+                    : entry.display_values.join(", "),
+            );
+        }
+    }
+    return data.map((entry) => {
+        const prefix = entry.tile_id ? prefixByTile.get(entry.tile_id) : "";
+        if (!prefix) {
+            return entry;
+        }
+        return {
+            ...entry,
+            display_values: entry.display_values.map((v) => `${prefix}: ${v}`),
+            links: entry.links.map((link) => ({
+                ...link,
+                label: `${prefix}: ${link.label}`,
+            })),
+        };
+    });
+}
 
 function bestWidgetLabel(nodeAlias: string) {
     return (
@@ -170,7 +212,7 @@ async function fetchData() {
     try {
         displayDataByAlias.value = await fetchNodeTileData(
             resourceInstanceId,
-            config.node_aliases,
+            fetchedAliases.value,
             RESOURCE_LIMIT_FOR_HEADER,
         );
         if (config.image_node_alias) {
@@ -250,7 +292,7 @@ onUnmounted(() => {
                     :key="nodeAlias"
                     :node-alias="nodeAlias"
                     :widget-label="bestWidgetLabel(nodeAlias)"
-                    :display-data="displayDataByAlias[nodeAlias]"
+                    :display-data="displayDataFor(nodeAlias)"
                 />
             </template>
         </div>
