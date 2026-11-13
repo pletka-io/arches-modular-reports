@@ -150,6 +150,18 @@ export interface ReportTombstoneConfig {
     image_node_alias?: string | null;
     image_fallback_relation_alias?: string | null;
     map_node_alias?: string | null;
+    related_image?: {
+        graph_slug: string;
+        image_node_alias: string;
+        sort_field: string;
+    };
+}
+
+export interface RelatedImagesConfig {
+    graph_slug: string;
+    image_node_alias: string;
+    sort_field: string;
+    rows_per_page: number;
 }
 
 export interface MapSectionConfig {
