@@ -34,3 +34,11 @@ export function toImages(
         ];
     });
 }
+
+/** The record's own image wins; else the first related image's file. */
+export function pickHeaderImage(
+    own: string | undefined,
+    related: RelatedImage[],
+): string | undefined {
+    return own || related[0]?.full;
+}

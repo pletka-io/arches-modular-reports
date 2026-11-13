@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { toImages } from "@/arches_modular_reports/ModularReport/related-images.ts";
+import {
+    pickHeaderImage,
+    toImages,
+} from "@/arches_modular_reports/ModularReport/related-images.ts";
 
 const row = (name: string, link: string, url?: string) => ({
     "@display_name": { display_value: name, links: [{ label: name, link }] },
@@ -42,5 +45,18 @@ describe("toImages", () => {
     });
     it("an empty page gives no images", () => {
         expect(toImages([], "image")).toEqual([]);
+    });
+});
+
+describe("pickHeaderImage", () => {
+    const rel = [{ href: "", thumb: "", full: "/files/rel", caption: "" }];
+    it("uses the record's own image when it has one", () => {
+        expect(pickHeaderImage("/files/own", rel)).toBe("/files/own");
+    });
+    it("falls back to the first related image", () => {
+        expect(pickHeaderImage(undefined, rel)).toBe("/files/rel");
+    });
+    it("nothing to show", () => {
+        expect(pickHeaderImage(undefined, [])).toBeUndefined();
     });
 });
