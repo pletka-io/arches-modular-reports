@@ -162,6 +162,7 @@ class RelatedResourceView(APIBase):
         sort_field = request.GET.get("sort_field", "@relation_name")
         direction = request.GET.get("direction", "asc")
         query = request.GET.get("query", "")
+        natural = request.GET.get("natural", "").lower() == "true"
         request_language = translation.get_language()
 
         permitted_nodegroups = get_nodegroups_by_perm(
@@ -181,6 +182,7 @@ class RelatedResourceView(APIBase):
             direction=direction,
             query=query,
             request_language=request_language,
+            natural=natural,
         )
         paginator = Paginator(relations, rows_per_page)
         result_page = paginator.get_page(page_number)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     pickHeaderImage,
+    relatedImageAliases,
     toImages,
 } from "@/arches_modular_reports/ModularReport/related-images.ts";
 
@@ -58,5 +59,17 @@ describe("pickHeaderImage", () => {
     });
     it("nothing to show", () => {
         expect(pickHeaderImage(undefined, [])).toBeUndefined();
+    });
+});
+
+describe("relatedImageAliases", () => {
+    it("requests the sort field too, so the server can order by it", () => {
+        expect(relatedImageAliases("image", "identifier_content")).toEqual([
+            "image",
+            "identifier_content",
+        ]);
+    });
+    it("asks for an alias once when the image node is the sort field", () => {
+        expect(relatedImageAliases("image", "image")).toEqual(["image"]);
     });
 });

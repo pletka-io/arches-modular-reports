@@ -3,7 +3,10 @@ import { computed, onMounted, ref } from "vue";
 import { useGettext } from "vue3-gettext";
 import Paginator from "primevue/paginator";
 import { fetchRelatedResourceData } from "@/arches_modular_reports/ModularReport/api.ts";
-import { toImages } from "@/arches_modular_reports/ModularReport/related-images.ts";
+import {
+    relatedImageAliases,
+    toImages,
+} from "@/arches_modular_reports/ModularReport/related-images.ts";
 import type { RelatedImage } from "@/arches_modular_reports/ModularReport/related-images.ts";
 import type { RelatedImagesConfig } from "@/arches_modular_reports/ModularReport/types.ts";
 
@@ -18,21 +21,30 @@ const total = ref(0);
 const first = ref(0);
 const failed = ref(new Set<string>());
 const error = ref(false);
+// Set once a page had an image: the section and its pager then stay, so a
+// page whose Digital Objects have no image does not hide the way back.
+const hadImages = ref(false);
 
 async function load(page: number) {
+    error.value = false;
     try {
         const data = await fetchRelatedResourceData(
             props.resourceInstanceId,
             cfg.value.graph_slug,
-            [cfg.value.image_node_alias],
+            relatedImageAliases(
+                cfg.value.image_node_alias,
+                cfg.value.sort_field,
+            ),
             cfg.value.rows_per_page,
             page,
             cfg.value.sort_field,
             "asc",
             "",
+            true,
         );
         images.value = toImages(data.results, cfg.value.image_node_alias);
         total.value = data.total_count;
+        if (images.value.length) hadImages.value = true;
     } catch {
         error.value = true;
     }
@@ -48,19 +60,19 @@ onMounted(() => load(1));
 
 <template>
     <section
-        v-if="total > 0 || error"
+        v-if="hadImages || error"
         class="related-images"
     >
         <p v-if="error">
             {{ $gettext("An error occurred while fetching data.") }}
         </p>
         <div
-            v-else
+            v-else-if="images.length"
             class="related-images-grid"
         >
             <a
-                v-for="img in images"
-                :key="img.href"
+                v-for="(img, i) in images"
+                :key="i"
                 :href="img.href"
                 class="related-images-item"
             >
@@ -80,7 +92,7 @@ onMounted(() => load(1));
             </a>
         </div>
         <Paginator
-            v-if="total > cfg.rows_per_page"
+            v-if="!error && total > cfg.rows_per_page"
             :rows="cfg.rows_per_page"
             :total-records="total"
             :first="first"

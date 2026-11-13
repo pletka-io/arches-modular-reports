@@ -42,3 +42,11 @@ export function pickHeaderImage(
 ): string | undefined {
     return own || related[0]?.full;
 }
+
+/** Node aliases to request: the server only sorts by an alias it was asked for. */
+export function relatedImageAliases(
+    imageAlias: string,
+    sortField: string,
+): string[] {
+    return [...new Set([imageAlias, sortField])];
+}

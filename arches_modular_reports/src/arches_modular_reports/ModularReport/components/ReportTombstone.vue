@@ -15,6 +15,7 @@ import { RESOURCE_LIMIT_FOR_HEADER } from "@/arches_modular_reports/constants.ts
 import LabeledNodeValues from "@/arches_modular_reports/ModularReport/components/LabeledNodeValues.vue";
 import {
     pickHeaderImage,
+    relatedImageAliases,
     toImages,
 } from "@/arches_modular_reports/ModularReport/related-images.ts";
 import { createGeometryMap } from "@/arches_modular_reports/ModularReport/utils/geometry-map.ts";
@@ -231,12 +232,13 @@ async function fetchRelatedImage() {
         const data = await fetchRelatedResourceData(
             resourceInstanceId,
             related.graph_slug,
-            [related.image_node_alias],
+            relatedImageAliases(related.image_node_alias, related.sort_field),
             1,
             1,
             related.sort_field,
             "asc",
             "",
+            true,
         );
         relatedImages.value = toImages(data.results, related.image_node_alias);
     } catch {

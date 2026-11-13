@@ -19,7 +19,7 @@ from django.db.models import (
 )
 from django.db.models.expressions import CombinedExpression
 from django.db.models.fields.json import KT
-from django.db.models.functions import Cast, Concat, JSONObject
+from django.db.models.functions import Cast, Concat, JSONObject, Length
 from django.urls import get_script_prefix, reverse
 from django.utils.translation import gettext as _
 
@@ -349,6 +349,7 @@ def get_sorted_filtered_relations(
     direction,
     query,
     request_language,
+    natural=False,
 ):
     if arches_version < Version("8.0"):
         resource_from_field = "resourceinstanceidfrom"
@@ -495,12 +496,16 @@ def get_sorted_filtered_relations(
         )
         relations = relations.filter(all_filters)
 
-    if direction.lower().startswith("asc"):
-        relations = relations.order_by(F(sort_field).asc(nulls_last=True))
-    else:
-        relations = relations.order_by(F(sort_field).desc(nulls_last=True))
+    return relations.order_by(*relation_ordering(sort_field, direction, natural))
 
-    return relations
+
+def relation_ordering(sort_field, direction, natural=False):
+    """Order by sort_field; natural orders by (length, value) instead, so
+    unpadded numbers sort 1, 2, 10 rather than 1, 10, 2."""
+    keys = [Length(sort_field), F(sort_field)] if natural else [F(sort_field)]
+    if direction.lower().startswith("asc"):
+        return [key.asc(nulls_last=True) for key in keys]
+    return [key.desc(nulls_last=True) for key in keys]
 
 
 def filter_hidden_nodes(
