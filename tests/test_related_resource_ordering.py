@@ -48,7 +48,7 @@ class RelatedResourceViewNaturalParamTests(SimpleTestCase):
         request.user = mock.Mock()
         with (
             mock.patch.object(modular_report.models, "ResourceInstance"),
-            mock.patch.object(modular_report.models, "GraphModel"),
+            mock.patch.object(modular_report.models, "GraphModel") as graph_model,
             mock.patch.object(modular_report, "get_nodegroups_by_perm"),
             mock.patch.object(modular_report, "group_required"),
             mock.patch.object(
@@ -58,6 +58,7 @@ class RelatedResourceViewNaturalParamTests(SimpleTestCase):
                 modular_report, "get_sorted_filtered_relations"
             ) as get_relations,
         ):
+            graph_model.objects.get.return_value.name = "Some graph"
             annotate_nodes.return_value = []
             get_relations.return_value = []
             response = RelatedResourceView().get(request, "res-id", "some_graph")
