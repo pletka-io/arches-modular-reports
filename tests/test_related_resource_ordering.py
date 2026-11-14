@@ -45,6 +45,7 @@ class RelationOrderingTests(SimpleTestCase):
 class RelatedResourceViewNaturalParamTests(SimpleTestCase):
     def get_natural_arg(self, query_string):
         request = RequestFactory().get("/related/" + query_string)
+        request.user = mock.Mock()
         with (
             mock.patch.object(modular_report.models, "ResourceInstance"),
             mock.patch.object(modular_report.models, "GraphModel"),
