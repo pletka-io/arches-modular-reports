@@ -9,14 +9,21 @@ import Panel from "primevue/panel";
 import {
     fetchNodeGeoJSON,
     fetchNodeTileData,
+    fetchRelatedResourceData,
 } from "@/arches_modular_reports/ModularReport/api.ts";
 import { RESOURCE_LIMIT_FOR_HEADER } from "@/arches_modular_reports/constants.ts";
 import LabeledNodeValues from "@/arches_modular_reports/ModularReport/components/LabeledNodeValues.vue";
+import {
+    pickHeaderImage,
+    relatedImageAliases,
+    toImages,
+} from "@/arches_modular_reports/ModularReport/related-images.ts";
 import { createGeometryMap } from "@/arches_modular_reports/ModularReport/utils/geometry-map.ts";
 
 // mapbox-gl css ships globally via arches core arches.scss
 
 import type { FeatureCollection } from "geojson";
+import type { RelatedImage } from "@/arches_modular_reports/ModularReport/related-images.ts";
 import type { GeometryMap } from "@/arches_modular_reports/ModularReport/utils/geometry-map.ts";
 import type { Ref } from "vue";
 import type {
@@ -55,6 +62,7 @@ const fallbackImage = ref<{
     altText: string;
     parentReportUrl: string;
 } | null>(null);
+const relatedImages: Ref<RelatedImage[]> = ref([]);
 const mapFeatureCollection: Ref<FeatureCollection | null> = ref(null);
 const mapContainerElement = ref<HTMLDivElement | null>(null);
 
@@ -74,8 +82,12 @@ const imageUrl = computed(() => {
     if (isLoading.value) {
         return "";
     }
-    if (firstImageTileData.value?.links?.[0]?.url) {
-        return firstImageTileData.value.links[0].url;
+    const headerImage = pickHeaderImage(
+        firstImageTileData.value?.links?.[0]?.url,
+        relatedImages.value,
+    );
+    if (headerImage) {
+        return headerImage;
     }
     if (fallbackImage.value) {
         return fallbackImage.value.url;
@@ -89,6 +101,9 @@ const imageAltText = computed(() => {
     }
     if (firstImageTileData.value?.links?.[0]) {
         return firstImageTileData.value.links[0].altText;
+    }
+    if (relatedImages.value[0]?.caption) {
+        return relatedImages.value[0].caption;
     }
     if (fallbackImage.value?.altText) {
         return fallbackImage.value.altText;
@@ -207,6 +222,30 @@ async function fetchFallbackImage() {
     }
 }
 
+// Best-effort: a record without its own image shows a related resource's.
+async function fetchRelatedImage() {
+    const related = config.related_image;
+    if (!related || firstImageTileData.value?.links?.[0]?.url) {
+        return;
+    }
+    try {
+        const data = await fetchRelatedResourceData(
+            resourceInstanceId,
+            related.graph_slug,
+            relatedImageAliases(related.image_node_alias, related.sort_field),
+            1,
+            1,
+            related.sort_field,
+            "asc",
+            "",
+            true,
+        );
+        relatedImages.value = toImages(data.results, related.image_node_alias);
+    } catch {
+        // Keep the existing fallbacks.
+    }
+}
+
 async function fetchData() {
     isLoading.value = true;
     try {
@@ -228,7 +267,11 @@ async function fetchData() {
     } finally {
         isLoading.value = false;
     }
-    await Promise.all([fetchMapData(), fetchFallbackImage()]);
+    await Promise.all([
+        fetchMapData(),
+        fetchFallbackImage(),
+        fetchRelatedImage(),
+    ]);
 }
 
 watch(
@@ -253,11 +296,11 @@ onUnmounted(() => {
 <template>
     <Panel style="border: 0; border-radius: 0">
         <div
-            v-if="imageNodeData || mapFeatureCollection"
+            v-if="imageNodeData || relatedImages.length || mapFeatureCollection"
             class="media-container"
         >
             <div
-                v-if="imageNodeData"
+                v-if="imageNodeData || relatedImages.length"
                 class="image-container"
             >
                 <img
@@ -265,7 +308,7 @@ onUnmounted(() => {
                     :alt="imageAltText"
                 />
                 <a
-                    v-if="fallbackImage"
+                    v-if="fallbackImage && !relatedImages.length"
                     class="fallback-image-caption"
                     :href="fallbackImage.parentReportUrl"
                 >

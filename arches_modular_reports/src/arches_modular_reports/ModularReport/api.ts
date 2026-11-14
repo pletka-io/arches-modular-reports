@@ -201,6 +201,7 @@ export const fetchRelatedResourceData = async (
     sortField: string,
     direction: string,
     query: string,
+    natural = false,
 ) => {
     const url = arches.urls.api_related_resources(
         resourceInstanceId,
@@ -214,6 +215,8 @@ export const fetchRelatedResourceData = async (
         direction,
         query,
     });
+    // Order sort_field by (length, value): unpadded numbers sort 1, 2, 10.
+    if (natural) params.set("natural", "true");
 
     const response = await fetch(url + "?" + params.toString());
     const parsed = await response.json();
