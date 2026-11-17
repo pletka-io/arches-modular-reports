@@ -339,6 +339,28 @@ def get_sorted_filtered_tiles(
     return tiles
 
 
+def relation_name_expression(
+    resource, resource_to_field, node_field, reverse_labels, request_language
+):
+    """The widget label of the relation's node, or for an incoming relation
+    the reverse label configured for that node (e.g. "Contains artefact"
+    instead of the artefact's "Part of context")."""
+    widget_label = KT(f"relation_name_json__{request_language}")
+    if not reverse_labels:
+        return widget_label
+    return Case(
+        *[
+            When(
+                Q(**{resource_to_field: resource, f"{node_field}__alias": alias}),
+                then=Value(label),
+            )
+            for alias, label in reverse_labels.items()
+        ],
+        default=widget_label,
+        output_field=TextField(),
+    )
+
+
 def get_sorted_filtered_relations(
     *,
     resource,
@@ -350,6 +372,7 @@ def get_sorted_filtered_relations(
     query,
     request_language,
     natural=False,
+    reverse_labels=None,
 ):
     if arches_version < Version("8.0"):
         resource_from_field = "resourceinstanceidfrom"
@@ -463,7 +486,17 @@ def get_sorted_filtered_relations(
         )
         # TODO: add fallback to system language? Below also.
         # https://github.com/archesproject/arches/issues/10028
-        .annotate(**{"@relation_name": KT(f"relation_name_json__{request_language}")})
+        .annotate(
+            **{
+                "@relation_name": relation_name_expression(
+                    resource,
+                    resource_to_field,
+                    node_field,
+                    reverse_labels,
+                    request_language,
+                )
+            }
+        )
         .annotate(
             display_name_json=Case(
                 When(

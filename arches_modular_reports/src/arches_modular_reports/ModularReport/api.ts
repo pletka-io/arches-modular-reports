@@ -202,6 +202,7 @@ export const fetchRelatedResourceData = async (
     direction: string,
     query: string,
     natural = false,
+    reverseLabels: Record<string, string> = {},
 ) => {
     const url = arches.urls.api_related_resources(
         resourceInstanceId,
@@ -217,6 +218,9 @@ export const fetchRelatedResourceData = async (
     });
     // Order sort_field by (length, value): unpadded numbers sort 1, 2, 10.
     if (natural) params.set("natural", "true");
+    // Incoming relations show these labels instead of the node's widget label.
+    if (Object.keys(reverseLabels).length)
+        params.set("reverse_labels", JSON.stringify(reverseLabels));
 
     const response = await fetch(url + "?" + params.toString());
     const parsed = await response.json();

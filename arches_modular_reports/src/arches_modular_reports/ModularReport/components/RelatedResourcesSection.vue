@@ -28,6 +28,8 @@ const props = defineProps<{
             node_aliases: string[];
             graph_slug: string;
             custom_labels: Record<string, string>;
+            // {alias of a node in the related graph: label for incoming links}
+            reverse_labels?: Record<string, string>;
         };
     };
     resourceInstanceId: string;
@@ -154,6 +156,8 @@ async function fetchData(requested_page: number = 1) {
                 sortField.value,
                 direction.value,
                 query.value,
+                false,
+                props.component.config.reverse_labels,
             );
 
         pageNumberToNodegroupTileData.value[page] = results;
