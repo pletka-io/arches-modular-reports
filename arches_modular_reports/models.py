@@ -340,6 +340,14 @@ class ReportConfig(models.Model):
             datatype__in=self.excluded_datatypes
         )
         self.validate_node_aliases(rr_config, "Related Resources", usable_related_nodes)
+        # reverse_labels: {alias of a node in the related graph: label shown
+        # when that node links the related resource to this one (incoming)}
+        reversed_aliases = set(rr_config.get("reverse_labels", {}))
+        if extra := reversed_aliases - {node.alias for node in usable_related_nodes}:
+            raise ValidationError(
+                "Related Resources section has reverse labels for "
+                f"invalid node aliases: {extra}"
+            )
 
     def validate_node_aliases(self, config, section_name, usable_nodes_queryset):
         requested_node_aliases = self.get_or_raise(config, "node_aliases", section_name)

@@ -144,6 +144,17 @@ class ModularReportAwareResourceReportView(ResourceReportView):
         return render(request, template, context)
 
 
+def parse_reverse_labels(raw):
+    """{node alias: label} from the query string; anything else is ignored."""
+    try:
+        parsed = json.loads(raw) if raw else {}
+    except ValueError:
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    return {k: v for k, v in parsed.items() if isinstance(v, str)}
+
+
 @method_decorator(can_read_resource_instance, name="dispatch")
 class RelatedResourceView(APIBase):
     def get(self, request, resourceid, related_graph_slug):
@@ -163,6 +174,7 @@ class RelatedResourceView(APIBase):
         direction = request.GET.get("direction", "asc")
         query = request.GET.get("query", "")
         natural = request.GET.get("natural", "").lower() == "true"
+        reverse_labels = parse_reverse_labels(request.GET.get("reverse_labels", ""))
         request_language = translation.get_language()
 
         permitted_nodegroups = get_nodegroups_by_perm(
@@ -183,6 +195,7 @@ class RelatedResourceView(APIBase):
             query=query,
             request_language=request_language,
             natural=natural,
+            reverse_labels=reverse_labels,
         )
         paginator = Paginator(relations, rows_per_page)
         result_page = paginator.get_page(page_number)

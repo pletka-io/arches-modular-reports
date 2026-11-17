@@ -265,6 +265,14 @@ RelatedResourcesSection objects can be grouped together under a common name with
 }
 ```
 
+The relationship column shows the widget label of the node that holds the link. For an incoming link (the node sits in the related graph and points at this resource) that label reads the wrong way round, e.g. "Part of Context" on a context's list of artefacts. The optional `reverse_labels` object gives the label to show instead, keyed by the alias of that node in the related graph. Outgoing links and nodes without an entry keep the widget label; sorting and searching use the label shown.
+
+```json
+"reverse_labels": {
+  "part_of_context": "Contains artefact"
+}
+```
+
 ---
 
 ### Common Configuration Properties
