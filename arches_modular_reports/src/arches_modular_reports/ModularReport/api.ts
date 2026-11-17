@@ -7,6 +7,7 @@ import {
     extractFileEntriesFromAliasedData,
 } from "@/arches_vue_components/generics/GenericCard/utils.ts";
 
+import { relatedResourceParams } from "@/arches_modular_reports/ModularReport/related-resource-params.ts";
 import type { ResourceData } from "@/arches_modular_reports/ModularReport/types.ts";
 
 export const fetchGraphSlugFromId = async (graphId: string) => {
@@ -208,19 +209,16 @@ export const fetchRelatedResourceData = async (
         resourceInstanceId,
         relatedGraphSlug,
     );
-    const params = new URLSearchParams({
-        node_aliases: nodeAliases.join(","),
-        rows_per_page: rowsPerPage.toString(),
-        page: page.toString(),
-        sort_field: sortField,
+    const params = relatedResourceParams(
+        nodeAliases,
+        rowsPerPage,
+        page,
+        sortField,
         direction,
         query,
-    });
-    // Order sort_field by (length, value): unpadded numbers sort 1, 2, 10.
-    if (natural) params.set("natural", "true");
-    // Incoming relations show these labels instead of the node's widget label.
-    if (Object.keys(reverseLabels).length)
-        params.set("reverse_labels", JSON.stringify(reverseLabels));
+        natural,
+        reverseLabels,
+    );
 
     const response = await fetch(url + "?" + params.toString());
     const parsed = await response.json();
