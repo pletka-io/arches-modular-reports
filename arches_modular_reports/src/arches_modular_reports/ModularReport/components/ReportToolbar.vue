@@ -7,11 +7,16 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import type { Ref } from "vue";
 
+import { classicReportUrl } from "@/arches_modular_reports/ModularReport/classic-report-url.ts";
 import type { SectionContent } from "@/arches_modular_reports/ModularReport/types";
 
 const { $gettext } = useGettext();
 
 const hideEmptyFields = inject("hideEmptyFields") as Ref<boolean>;
+// Editors get a link to the classic report, as a check on the modular one.
+const userCanEditResourceInstance = inject(
+    "userCanEditResourceInstance",
+) as Ref<boolean>;
 
 enum ExportFormat {
     JSON = "json",
@@ -96,6 +101,18 @@ function exportData(exportFormat: ExportFormat) {
         >
             {{ $gettext("Hide empty fields") }}
         </label>
+        <a
+            v-if="userCanEditResourceInstance"
+            class="classic-view-link"
+            :href="
+                classicReportUrl(
+                    arches.urls.resource_report,
+                    resourceInstanceId,
+                )
+            "
+        >
+            {{ $gettext("Classic view") }}
+        </a>
     </div>
 </template>
 
@@ -126,5 +143,9 @@ function exportData(exportFormat: ExportFormat) {
 .hide-empty-label {
     color: var(--p-text-color);
     cursor: pointer;
+}
+
+.classic-view-link {
+    margin-inline-start: 1rem;
 }
 </style>
