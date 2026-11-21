@@ -13,10 +13,6 @@ import type { SectionContent } from "@/arches_modular_reports/ModularReport/type
 const { $gettext } = useGettext();
 
 const hideEmptyFields = inject("hideEmptyFields") as Ref<boolean>;
-// Editors get a link to the classic report, as a check on the modular one.
-const userCanEditResourceInstance = inject(
-    "userCanEditResourceInstance",
-) as Ref<boolean>;
 
 enum ExportFormat {
     JSON = "json",
@@ -102,7 +98,6 @@ function exportData(exportFormat: ExportFormat) {
             {{ $gettext("Hide empty fields") }}
         </label>
         <a
-            v-if="userCanEditResourceInstance"
             class="classic-view-link"
             :href="
                 classicReportUrl(
