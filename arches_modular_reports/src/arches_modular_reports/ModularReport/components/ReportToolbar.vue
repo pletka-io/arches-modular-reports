@@ -7,6 +7,7 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import type { Ref } from "vue";
 
+import { classicReportUrl } from "@/arches_modular_reports/ModularReport/classic-report-url.ts";
 import type { SectionContent } from "@/arches_modular_reports/ModularReport/types";
 
 const { $gettext } = useGettext();
@@ -96,6 +97,17 @@ function exportData(exportFormat: ExportFormat) {
         >
             {{ $gettext("Hide empty fields") }}
         </label>
+        <a
+            class="classic-view-link"
+            :href="
+                classicReportUrl(
+                    arches.urls.resource_report,
+                    resourceInstanceId,
+                )
+            "
+        >
+            {{ $gettext("Classic view") }}
+        </a>
     </div>
 </template>
 
@@ -126,5 +138,9 @@ function exportData(exportFormat: ExportFormat) {
 .hide-empty-label {
     color: var(--p-text-color);
     cursor: pointer;
+}
+
+.classic-view-link {
+    margin-inline-start: 1rem;
 }
 </style>

@@ -2,6 +2,7 @@ from django.urls import include, path, re_path
 
 from arches.app.models.system_settings import settings
 
+from arches_modular_reports.app.views.classic_report import ClassicResourceReport
 from arches_modular_reports.app.views.modular_report import (
     ModularReportAwareResourceReportView,
     GraphSlugFromIdView,
@@ -34,6 +35,11 @@ urlpatterns = [
         "report/<uuid:resourceid>/<str:report_config_slug>",
         ModularReportAwareResourceReportView.as_view(),
         name="resource_report",
+    ),
+    path(
+        "api/resource_report_classic/<uuid:resourceid>",
+        ClassicResourceReport.as_view(),
+        name="api_resource_report_classic",
     ),
     path(
         "api/graph_slug/<uuid:graphid>",

@@ -88,7 +88,8 @@ class ModularReportAwareResourceReportView(ResourceReportView):
                 _("No active report template is available for this resource.")
             )
 
-        if graph.template.componentname == "modular-report":
+        classic = request.GET.get("view") == "classic"
+        if graph.template.componentname == "modular-report" and not classic:
             try:
                 config_instance = get_report_config(resourceid, report_config_slug)
                 report_theme = config_instance.config.get("theme", None)
@@ -133,6 +134,8 @@ class ModularReportAwareResourceReportView(ResourceReportView):
                 geocoding_providers=models.Geocoder.objects.all(),
                 graph_name=graph.name,
                 name_resource=name_resource,
+                # arches_urls.htm points the page at the classic report API
+                classic_report=classic,
             )
 
         if graph.iconclass:
