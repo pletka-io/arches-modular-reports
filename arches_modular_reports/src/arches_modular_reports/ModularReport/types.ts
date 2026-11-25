@@ -177,7 +177,8 @@ export interface ReportToolbarConfig {
 }
 
 export interface NumberFormat {
-    format: string;
+    format: string | null;
+    precision?: number | string | null;
     prefix: Record<string, string>;
     suffix: Record<string, string>;
 }

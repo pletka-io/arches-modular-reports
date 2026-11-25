@@ -93,7 +93,20 @@ export function formatNumber(
     const language = isRef(languageSettings)
         ? (languageSettings.value as LanguageSettings).ACTIVE_LANGUAGE
         : languageSettings.ACTIVE_LANGUAGE;
+    if (value === null || value === undefined || value === "") {
+        return "";
+    }
     const prefix = numberFormat.prefix?.[language] ?? "";
     const suffix = numberFormat.suffix?.[language] ?? "";
-    return `${prefix}${numeral(value).format(numberFormat.format)}${suffix}`;
+    // numeral reads an empty format as "0,0" (whole numbers): without a
+    // format, round to the widget's precision, or show the value as stored.
+    let format = numberFormat.format;
+    if (!format) {
+        const precision = parseInt(String(numberFormat.precision ?? ""), 10);
+        if (!Number.isNaN(precision)) {
+            format = precision > 0 ? `0,0.${"0".repeat(precision)}` : "0,0";
+        }
+    }
+    const formatted = format ? numeral(value).format(format) : String(value);
+    return `${prefix}${formatted}${suffix}`;
 }

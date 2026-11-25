@@ -303,7 +303,8 @@ class NodePresentationView(APIBase):
                 config = getattr(queryset[0], "config", None)
                 if config:
                     ret = {
-                        "format": config.get("format", fallback),
+                        "format": config.get("format") or "",
+                        "precision": config.get("precision"),
                         "prefix": config.get("prefix", fallback),
                         "suffix": config.get("suffix", fallback),
                     }
